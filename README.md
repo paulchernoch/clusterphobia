@@ -1,5 +1,13 @@
 # clusterphobia - A Rust Crate for People Who Fear Clustering
 
+This crate is based on ideas and algorithms originally developed in C# in this repository:
+
+https://github.com/paulchernoch/HilbertTransformation
+
+For an understanding of the theory, see **SLASH.pdf** in the `clusterphobia` github repo:
+
+https://github.com/paulchernoch/clusterphobia
+
 ## Project Goals
 
 **Clusterphobia** is intended to provide clustering tools for _scalable_, _high-dimensional_, _unassisted_, _flat_, _single classification_ of data.
@@ -129,3 +137,9 @@ The optimization that I found was that if two items end up in the same cluster, 
 I figured out another trick - you could do this in a single pass! Keeping a running sum of the squares of counts in each category, if you see a count was one and increase it to two, then you add the difference between one and four, which is three. If going from two to three, the increase in the sum of squares is 9 - 4 = 5. The difference is always `2 * previous_count + 1`.
 
 Anyway, that is how I reduced a quadratic algorithm to a linear one.
+
+## Coming Soon...
+
+The next functionality that will be implemented is **Linkage analysis**.
+
+
