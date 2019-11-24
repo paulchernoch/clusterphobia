@@ -73,6 +73,7 @@ use super::Clustering;
 /// 
 /// 
 /// ```
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct BCubed {
     /// `Precision` is a measure of homogeneity. 
     /// Are only related objects grouped together (high precision), 
@@ -182,4 +183,69 @@ impl BCubed {
         }
         sum_of_squares
     }
+}
+
+
+#[cfg(test)]
+/// Tests of the BCubed methods.
+/// 
+/// Tests with the prefix "amigo_" use test cases from the paper 
+/// _A comparison of Extrinsic Clustering Evaluation Metrics based on Formal Constraints_  
+/// by **Enrique Amigo, Julio Gonzalo, Javier Artiles, Felisa Verdejo**
+/// 
+/// Each has a left and a right clustering (referring to their position in Figure 11 of the paper)
+/// as well as a gold standard clustering. 
+/// The left is supposed to give a poorer similarity than the right. 
+/// NOTE: The numbers in the paper seem to assume you round Precision and Recall 
+/// down to the nearest hundredths, then compute the similarity, then take the floor again. 
+mod tests {
+    #[allow(unused_imports)]
+    use spectral::prelude::*;
+    use crate::clustering;
+    use crate::clustering::bcubed::BCubed;
+
+    fn approximately_equal(b1 : BCubed, b2 : BCubed, delta : f64) -> bool {
+        let diff = (b1.similarity() - b2.similarity()).abs();
+        diff < delta
+    }
+
+    #[test]
+    fn amigo_cluster_homogeneity() {
+        let left_text =  "1,2,3,4;5,6,7;8,9,10,11,12,13,14";
+        let right_text = "1,2,3,4;5;6,7;8,9,10,11,12,13,14";
+        let gold_text =  "1,2,3,4,5;6,7,9,12,13,14;8;10;11";
+
+        let left_clustering = clustering::from_delimited_string(left_text);
+        let right_clustering = clustering::from_delimited_string(right_text);
+        let gold_clustering = clustering::from_delimited_string(gold_text);
+
+        let bcubed_left = BCubed::compare(&left_clustering, &gold_clustering, 0.5);
+        let bcubed_right = BCubed::compare(&right_clustering, &gold_clustering, 0.5);
+
+        let expected_left = BCubed::new(0.59, 0.69, 0.5);
+        let expected_right = BCubed::new(0.69, 0.69, 0.5);
+
+        asserting(&format!("left cluster bcubed was {:?} with similarity {}", bcubed_left, bcubed_left.similarity()))
+            .that(&approximately_equal(bcubed_left, expected_left, 0.01)).is_equal_to(true);
+        asserting(&format!("right cluster bcubed was {:?} with similarity {}", bcubed_right, bcubed_right.similarity()))
+            .that(&approximately_equal(bcubed_right, expected_right, 0.01)).is_equal_to(true);
+    }
+
+    #[test]
+    fn amigo_cluster_completeness() {
+
+    }
+
+    #[test]
+    fn amigo_rag_bag() {
+
+    }
+
+    #[test]
+    fn amigo_cluster_size_vs_quantity() {
+
+    }
+
+    
+
 }

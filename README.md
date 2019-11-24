@@ -63,6 +63,8 @@ The following paper compared many clustering algorithms and found **B-Cubed** th
  
 [2] _A comparison of Extrinsic Clustering Evaluation Metrics based on Formal Constraints_  by **Enrique Amigo, Julio Gonzalo, Javier Artiles, Felisa Verdejo**
 of the Departamento de Lenguajes y Sistemas Informaticos UNED, Madrid, Spain, May 11, 2009
+
+The above is available here: http://nlp.uned.es/docs/amigo2007a.pdf
  
 A subsequent paper identified a use case where **B-Cubed** fared poorly: unbalanced datasets where one cluster dominates: 
  
