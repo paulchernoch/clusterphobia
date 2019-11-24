@@ -1,0 +1,20 @@
+[package]
+name = "clusterphobia"
+license = "MIT"
+version = "0.1.0"
+authors = ["paulchernoch <paul.chernoch@yahoo.com>"]
+edition = "2018"
+description = "Algorithms and data structures for unassisted clustering."
+readme = "README.md"
+keywords = ["clustering", "Hilbert", "curve", "B-cubed", "BCubed", "single-link", "agglomeration", "agglomerative"]
+categories = ["algorithms"]
+repository = "https://github.com/paulchernoch/clusterphobia"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+spectral = "0.6.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.41"
+csv = "1.1"
+hilbert = "0.1"
