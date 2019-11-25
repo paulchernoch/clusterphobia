@@ -1,4 +1,4 @@
-use std::collections::{HashMap, hash_map::Values};
+use std::collections::{HashMap};
 use std::fmt::{Formatter,Debug};
 use std::ops::Range;
 use std::usize;
@@ -6,7 +6,6 @@ pub mod cluster;
 pub mod bcubed;
 
 use self::cluster::{Cluster, Chopped};
-use self::bcubed::BCubed;
 
 /// Partitions items into one or more non-overlapping Clusters. 
 /// Each item may belong to a single Cluster.

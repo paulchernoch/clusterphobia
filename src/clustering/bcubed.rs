@@ -1,5 +1,5 @@
-use std::collections::{HashMap, hash_map::Entry, HashSet};
-use super::cluster::{Cluster, Chopped};
+use std::collections::{HashMap, hash_map::Entry};
+use super::cluster::{Chopped};
 use super::Clustering;
 
 /// The B-Cubed extrinsic measure of the similarity of two Clusterings. 
