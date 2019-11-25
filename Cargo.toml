@@ -6,7 +6,7 @@ authors = ["paulchernoch <paul.chernoch@yahoo.com>"]
 edition = "2018"
 description = "Algorithms and data structures for unassisted clustering that employ the Hilbert Curve."
 readme = "README.md"
-keywords = ["clustering", "Hilbert curve", "B-cubed", "single-link", "bottom up agglomeration"]
+keywords = ["clustering", "Hilbert", "B-cubed", "single-link", "agglomeration"]
 categories = ["algorithms"]
 repository = "https://github.com/paulchernoch/clusterphobia"
 
