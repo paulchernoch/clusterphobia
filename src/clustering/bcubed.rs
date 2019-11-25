@@ -196,8 +196,12 @@ impl BCubed {
 /// Each has a left and a right clustering (referring to their position in Figure 11 of the paper)
 /// as well as a gold standard clustering. 
 /// The left is supposed to give a poorer similarity than the right. 
-/// NOTE: The numbers in the paper seem to assume you round Precision and Recall 
-/// down to the nearest hundredths, then compute the similarity, then take the floor again. 
+/// 
+/// NOTES: 
+///    1. The numbers in the paper seem to assume you round Precision and Recall 
+///       down to the nearest hundredths, then compute the similarity, then take the floor again. 
+///    2. Some values in the paper are wrong. I recomputed the values by hand. 
+///       None of the data errors in the paper invalidate its conclusion. 
 mod tests {
     #[allow(unused_imports)]
     use spectral::prelude::*;
@@ -209,6 +213,9 @@ mod tests {
         diff < delta
     }
 
+    /// Verify the finding that BCubed values improve if the cluster homogeneity property improves. 
+    /// 
+    /// Clusters are more homogeneous if there are fewer instances where items that do not belong together are clustered together.
     #[test]
     fn amigo_cluster_homogeneity() {
         // These clusters are based on me assigning a number for each color or shading pattern in the images in the Amigo paper
@@ -233,6 +240,9 @@ mod tests {
             .that(&approximately_equal(bcubed_right, expected_right, 0.01)).is_equal_to(true);
     }
 
+    /// Verify the finding that BCubed values improve if the cluster completeness property improves. 
+    /// 
+    /// Clusters are more complete if fewer items that belong together are split into separate clusters.
     #[test]
     fn amigo_cluster_completeness() {
         // These clusters are based on me assigning a number for each color or shading pattern in the images in the Amigo paper
@@ -258,6 +268,10 @@ mod tests {
             .that(&approximately_equal(bcubed_right, expected_right, 0.01)).is_equal_to(true);
     }
 
+    /// Verify the finding that BCubed values improve if the rag bag property improves. 
+    /// 
+    /// A rag bag is a collection of outliers that do not belong together yet are clustered together.
+    /// Moving an item from a real cluster of like items and moving it into a rag bag cluster should improve the measure. 
     #[test]
     fn amigo_rag_bag() {
         // These clusters are based on me assigning a number for each color or shading pattern in the images in the Amigo paper
@@ -281,9 +295,14 @@ mod tests {
             .that(&approximately_equal(bcubed_left, expected_left, 0.01)).is_equal_to(true);
         asserting(&format!("right cluster bcubed was {:?} with similarity {}", bcubed_right, bcubed_right.similarity()))
             .that(&approximately_equal(bcubed_right, expected_right, 0.01)).is_equal_to(true);
-
     }
 
+    /// Verify the finding that BCubed values improve if the cluster size versus quantity property improves. 
+    /// 
+    /// The number of connections between items in a cluster increases as the square of cluster size.
+    /// If the similarity measure relies on counting connections without weighting by cluster size, then
+    /// larger clusters will be unfairly favored over smaller clusters. This test shows that improving
+    /// several small clusters is better than improving one large cluster. 
     #[test]
     fn amigo_cluster_size_vs_quantity() {
         // These clusters are based on me assigning a number for each color or shading pattern in the images in the Amigo paper
