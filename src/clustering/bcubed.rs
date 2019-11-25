@@ -247,7 +247,8 @@ mod tests {
 
         let bcubed_left = BCubed::compare(&left_clustering, &gold_clustering, 0.5);
         let bcubed_right = BCubed::compare(&right_clustering, &gold_clustering, 0.5);
-        // The Precision values given in the paper for this test are wrong - I recomputed them by hand!
+
+        // The Precision values given in the paper for this test are wrong (they stated 0.62) - I recomputed them by hand!
         let expected_left = BCubed::new(0.694, 0.71, 0.5);
         let expected_right = BCubed::new(0.694, 0.75, 0.5);
 
@@ -259,6 +260,27 @@ mod tests {
 
     #[test]
     fn amigo_rag_bag() {
+        // These clusters are based on me assigning a number for each color or shading pattern in the images in the Amigo paper
+        // related to the homogeneity test.
+        let left_text =  "1,2,3,4;5,6,7,8,9";
+        let right_text = "1,2,3,4,5;6,7,8,9";
+        let gold_text =  "1;2;3;4;5;6,7,8,9";
+
+        let left_clustering = clustering::from_delimited_string(left_text);
+        let right_clustering = clustering::from_delimited_string(right_text);
+        let gold_clustering = clustering::from_delimited_string(gold_text);
+
+        let bcubed_left = BCubed::compare(&left_clustering, &gold_clustering, 0.5);
+        let bcubed_right = BCubed::compare(&right_clustering, &gold_clustering, 0.5);
+
+        // The Precision values given in the paper for this test are wrong (they stated 0.52 and 0.64) - I recomputed them by hand!
+        let expected_left = BCubed::new(0.489, 1.0, 0.5);
+        let expected_right = BCubed::new(0.556, 1.0, 0.5);
+
+        asserting(&format!("left cluster bcubed was {:?} with similarity {}", bcubed_left, bcubed_left.similarity()))
+            .that(&approximately_equal(bcubed_left, expected_left, 0.01)).is_equal_to(true);
+        asserting(&format!("right cluster bcubed was {:?} with similarity {}", bcubed_right, bcubed_right.similarity()))
+            .that(&approximately_equal(bcubed_right, expected_right, 0.01)).is_equal_to(true);
 
     }
 
