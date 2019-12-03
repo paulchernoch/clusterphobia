@@ -14,3 +14,9 @@ impl From<&Clustered2D> for Point {
         Point::new(point2d.id, &[point2d.x, point2d.y])
     }
 }
+
+impl From<Clustered2D> for Point {
+    fn from(point2d: Clustered2D) -> Self {
+        Point::new(point2d.id, &[point2d.x, point2d.y])
+    }
+}

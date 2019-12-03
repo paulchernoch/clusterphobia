@@ -4,6 +4,7 @@ use std::ops::Range;
 use std::usize;
 pub mod cluster;
 pub mod bcubed;
+pub mod single_linkage;
 
 use self::cluster::{Cluster, Chopped};
 
