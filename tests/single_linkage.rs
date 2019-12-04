@@ -21,4 +21,9 @@ fn s2_single_linkage_find_by_sorting() {
     let expected_range = 3_100_000_000..3_500_000_000_u64;
     
     asserting(&format!("Actual Linkage square distance {} should be in expected range", actual_distance)).that(&expected_range.contains(&actual_distance)).is_equal_to(true);
+
+    // Experiment shows that when things go well, the estimated number of clusters is 1.5x to 3x the true number.
+    let is_cluster_count_reasonable = linkage_result.large_cluster_count >= 15 && linkage_result.large_cluster_count <= 45;
+
+    asserting(&format!("Estimated number of clusters {}", linkage_result.large_cluster_count)).that(&is_cluster_count_reasonable).is_equal_to(true);
 }
