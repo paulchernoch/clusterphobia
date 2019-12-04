@@ -271,10 +271,12 @@ impl SingleLinkage {
             stats.accumulate(i_distance, previous_distance, distance);
         }
 
+        // get_index_of_max_change returns the index on the high side of the largest change. 
+        // Subtract off 1 + noise_skip_by to get to the index before the big change. 
         let index_to_use = stats.get_index_of_max_change(
             self.lowest_index_for_checking_growth_ratio as usize, 
             conservative_high_index
-        );
+        ) - 1 - self.noise_skip_by as usize;
 
         let maximum_square_distance = sorted_distances[index_to_use].square_distance;
         self.estimate_cluster_counts(distances, maximum_square_distance)

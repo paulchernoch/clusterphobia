@@ -6,6 +6,11 @@ use crate::data::{s2_points};
 use clusterphobia::clustering::single_linkage::SingleLinkage;
 
 /// Test SingleLinkage::find_by_sorting against the s2 data set. 
+/// 
+/// The challenge posed by this data set is that the distance distribution increases
+/// fairly smoothly because of the noise and the fact that several clusters are partially overlapping.
+/// Ideally, we find a place where there is a gap in distances, but there is none!
+/// This forces us to bump against the lower limit on cluster count. 
 #[test]
 fn s2_single_linkage_find_by_sorting() {
     let mut points = s2_points();
@@ -18,7 +23,7 @@ fn s2_single_linkage_find_by_sorting() {
 
     // The linkage distance was derived by sorting the distances, plotting them on a graph,
     // and eyeballing it to see where the distances began to jump. 
-    let expected_range = 3_100_000_000..3_500_000_000_u64;
+    let expected_range = 2_500_000_000..3_000_000_000_u64;
     
     asserting(&format!("Actual Linkage square distance {} should be in expected range", actual_distance)).that(&expected_range.contains(&actual_distance)).is_equal_to(true);
 
