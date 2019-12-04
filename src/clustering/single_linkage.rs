@@ -1,7 +1,7 @@
 
 use std::ops::Range;
 use std::cmp::Ordering;
-use std::cmp::max;
+use std::cmp::{min,max};
 use hilbert::Point;
 
 // ........................... LinkageResult ..........................................
@@ -109,6 +109,14 @@ pub struct SingleLinkage {
     /// If true, perform a sort by the Hilbert curve first.
     need_to_sort_by_hilbert_curve : bool,
 
+    /// The linkage distance will be chosen so that at minimum, this number of clusters
+    /// will be yielded by a rough clustering.
+    /// The default is to use 1/(2√N). 
+    /// 
+    /// For example, if there are N = 5,000 points, yield a minimum of 35 clusters.
+    /// Subsequent rounds of clustering often reduce this number by three, or 12 clusters. 
+    minimum_cluster_count : u16,
+
     /// To accommodate noise, we will look for a sudden jump in distance not between adjacent points, but between 
     /// points separated by this number of positions (plus one) in sorted order. 
     /// The intent is to sharpen the signal. 
@@ -134,19 +142,29 @@ pub struct SingleLinkage {
     /// a proportionally huge increase, like going from 2 to 10 being a fivefold increase. 
     /// This threshold prevents upping the maximum_ratio seen until at least this many 
     /// distances have been checked. 
+    /// 
+    /// This defaults to ½N. 
+    /// 
+    ///   - Increase it if nearly half or more of your points are coincident or very close together. 
+    ///   - Decrease it if you have a huge number of outliers (beyond 40% outliers). 
     lowest_index_for_checking_growth_ratio : u32 
 }
 
 impl SingleLinkage {
     /// Create a SingleLinkage with all values set to defaults.
-    pub fn new(bits_per_dimension : u8) -> Self {
+    pub fn new(num_points : u32, bits_per_dimension : u8) -> Self {
+        let mut minimum_cluster_count = (num_points as f64).sqrt() / 2.0;
+        if minimum_cluster_count < 10.0 {
+            minimum_cluster_count = 10.0;
+        }
         SingleLinkage {
             bits_per_dimension,
+            minimum_cluster_count : minimum_cluster_count as u16,
             need_to_sort_by_hilbert_curve : false,
             noise_skip_by : 5,
             outlier_cluster_size : 10,
             sort_distances_completely : true,
-            lowest_index_for_checking_growth_ratio : 10
+            lowest_index_for_checking_growth_ratio : num_points / 2
         }
     }
 
@@ -169,6 +187,12 @@ impl SingleLinkage {
     /// Configure the algorithm by setting a value for `noise_skip_by`. 
     pub fn with_noise_skip_by(mut self, noise_skip_by : u16) -> Self {
         self.noise_skip_by = noise_skip_by;
+        self
+    }
+
+    /// Configure the algorithm by setting a value for `minimum_cluster_count`. 
+    pub fn with_minimum_cluster_count(mut self, min_cluster_count : u16) -> Self {
+        self.minimum_cluster_count = max(min_cluster_count, 6);
         self
     }
 
@@ -221,74 +245,37 @@ impl SingleLinkage {
     /// 
     /// NOTE: In my earlier C# code, this was called `FindMaximumSquareDistance`. 
     fn find_by_sorting(&self, points : &mut Vec<Point>, distances : &Vec<AdjacentPairDistance>) -> LinkageResult {
-        // NOTE: This is a port of a C# method named `FindMaximumSquareDistance`.
+        // NOTE: This is a port of a C# method named `FindMaximumSquareDistance`, with mods.
 
         // Why clone? We will later need the unsorted distances to estimate the potential effect of a clustering. 
         let mut sorted_distances = distances.clone();
-
+        
         // Use the default sort. 
         sorted_distances.sort();
 
-        //TODO: Remove DEBUG STATEMENT
-        println!("===== SORTED DISTANCES =======");
-        for dist in sorted_distances.iter() {
-            println!("{}", dist.square_distance);
-        }
-        println!("==============================");
+        //println!("===== SORTED DISTANCES =======");
+        //for dist in sorted_distances.iter() {
+        //    println!("{}", dist.square_distance);
+        //}
+        //println!("==============================");
 
-        let sorted_distances = distances;
-
-        let mut index_of_maximum_increase = 0;
-        let mut index_of_maximum_ratio = 0;
-        let mut max_increase = 0;
-        let mut max_ratio = 0.0;
-        let num_points = points.len();
-        let mut index_to_use;
+        let mut stats = DistanceGrowthStats::new();
         
-        for i_distance in (1 + self.noise_skip_by as usize)..sorted_distances.len()
+        let start_index = 1 + self.noise_skip_by as usize + self.lowest_index_for_checking_growth_ratio as usize;
+        let conservative_high_index = points.len() - self.minimum_cluster_count as usize;
+        for i_distance in start_index..conservative_high_index
         {
             let distance = sorted_distances[i_distance].square_distance;
-            let previous_distance = sorted_distances[i_distance - 1 - self.noise_skip_by as usize].square_distance;
-            let diff = distance - previous_distance;
-            if diff > max_increase
-            {
-                max_increase = diff;
-                index_of_maximum_increase = i_distance;
-            }
-            if previous_distance > 1 && i_distance >= self.lowest_index_for_checking_growth_ratio as usize
-            {
-                let ratio = distance as f64 / previous_distance as f64;
-                if ratio > max_ratio
-                {
-                    max_ratio = ratio;
-                    index_of_maximum_ratio = i_distance;
-
-                    //TODO: The test "max_ratio > 5.0" could cause problems if we have clusters with highly varying densities.
-                    //      Make it a parameter?
-                    if i_distance > num_points / 2 && max_ratio > 5.0 {
-                        break;
-                    }
-                }
-            }
+            let previous_index = i_distance - 1 - self.noise_skip_by as usize;
+            let previous_distance = sorted_distances[previous_index].square_distance;
+            stats.accumulate(i_distance, previous_distance, distance);
         }
 
-        // If the two measures agree, we have an unambiguous choice.
-        if index_of_maximum_increase == index_of_maximum_ratio {
-            index_to_use = index_of_maximum_increase;
-        }
-        // If the highest ratio in length between one distance and the next is at an early index,
-        // it is likely because we skipped from a really low value (like 1) to another really low value (like 10)
-        // which only looks like a large jump because the values are so small.
-        else if index_of_maximum_ratio < num_points / 2 {
-            index_to_use = index_of_maximum_increase;
-        }
-        // Once we get near the end of the series of distances, the jumps between successive
-        // distances can become large, but their relative change is small,
-        // so rely on the ratio instead.
-        else {
-            index_to_use = index_of_maximum_ratio;
-        }
-        index_to_use = max(0_usize, index_to_use - self.noise_skip_by as usize - 1);
+        let index_to_use = stats.get_index_of_max_change(
+            self.lowest_index_for_checking_growth_ratio as usize, 
+            conservative_high_index
+        );
+
         let maximum_square_distance = sorted_distances[index_to_use].square_distance;
         self.estimate_cluster_counts(distances, maximum_square_distance)
     }
@@ -455,6 +442,85 @@ impl SingleLinkage {
         linkage
     }
 }
+
+// ........................... DistanceGrowthStats .....................................................
+
+#[derive(Clone, Debug)]
+pub struct DistanceGrowthStats {
+    index_of_maximum_increase : usize,
+    index_of_maximum_ratio : usize,
+    index_of_maximum_increase_and_ratio : usize,
+    max_increase_alone : u64,
+    max_ratio_alone : f64,
+    max_increase_paired : u64,
+    max_ratio_paired : f64
+}
+
+/// Internal struct for accumulating guesses as to where the curve formed by square distances between points grows the fastest.
+impl DistanceGrowthStats {
+    pub fn new() -> Self {
+        DistanceGrowthStats {
+            index_of_maximum_increase : 0,
+            index_of_maximum_ratio : 0,
+            index_of_maximum_increase_and_ratio : 0,
+            max_increase_alone : 0,
+            max_ratio_alone : 0.0,
+            max_increase_paired : 0,
+            max_ratio_paired : 0.0
+        }
+    }
+
+    pub fn accumulate(&mut self, index : usize, previous_value : u64, new_value : u64) {
+        let delta = new_value - previous_value;
+        if previous_value == 0 { return; }
+        let ratio = new_value as f64 / previous_value as f64;
+        let mut both_high = true;
+        if delta > self.max_increase_alone { 
+            self.max_increase_alone = delta;
+            self.index_of_maximum_increase = index;
+        }
+        else {
+            both_high = false;
+        }
+        if ratio > self.max_ratio_alone { 
+            self.max_ratio_alone = ratio;
+            self.index_of_maximum_ratio = index;
+        }
+        else {
+            both_high = false;
+        }
+        if both_high {
+            self.index_of_maximum_increase_and_ratio = index;
+            self.max_increase_paired = delta;
+            self.max_ratio_paired = ratio;
+        }
+    }
+
+    /// Decide when the distance value changed the most, but be conservative if several measures disagree.
+    /// 
+    ///   - `i_low_paired` - Do not choose `i_bin_of_maximum_increase_and_ratio` if it falls below this. 
+    ///   - `i_high` - Do not go above this index.
+    ///   - return - The index into the sorted pairs of points having the best guess for linkage distance.
+    pub fn get_index_of_max_change(&self, i_low_paired : usize, i_high : usize) -> usize {
+        let i_conservative = i_low_paired + (i_high - i_low_paired) * 3 / 4;
+        if self.index_of_maximum_increase_and_ratio > i_high {
+            i_high
+        }
+        else if self.index_of_maximum_increase_and_ratio > i_conservative {
+            self.index_of_maximum_increase_and_ratio
+        }
+        else if self.index_of_maximum_ratio < i_conservative {
+            max(min(i_high, self.index_of_maximum_increase), i_low_paired)
+        }
+        else if self.index_of_maximum_increase < i_conservative {
+            max(min(i_high, self.index_of_maximum_ratio), i_low_paired)
+        }
+        else {
+            min(min(i_high, self.index_of_maximum_increase), self.index_of_maximum_ratio)
+        }
+    }
+}
+
 
 // ........................... AdjacentPairDistance ..........................................
 
@@ -699,8 +765,28 @@ impl DistanceBin {
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
+    use std::cmp::Ordering;
     use spectral::prelude::*;
+    use super::AdjacentPairDistance;
 
-
+    #[test]
+    fn adjacent_pair_distance_cmp(){
+        let pair1 = AdjacentPairDistance { 
+            square_distance : 100,
+            first_index : 1,
+            second_index : 2,
+            first_id : 1,
+            second_id : 2
+        };
+        let pair2 = AdjacentPairDistance { 
+            square_distance : 50,
+            first_index : 2,
+            second_index : 3,
+            first_id : 2,
+            second_id : 3
+        };
+        let comparison = pair1.cmp(&pair2);
+        asserting("Should compare greater than").that(&(comparison == Ordering::Greater)).is_equal_to(true);
+    }
 
 }
