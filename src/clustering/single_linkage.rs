@@ -76,10 +76,16 @@ impl LinkageResult {
 ///   - `find_by_binning` - This is faster but less accurate, using a **linear O(N)** bucket sort with logarithmically-sized buckets to partially sort the data.
 /// 
 /// This analysis uses a heuristic. It attempts to duplicate what people do easily by eye: 
-/// spot where the distribution of distances shows its first sudden jump, an elbow in the curve.
+/// spot where the distribution of distances shows its first sudden jump after the midpoint, an elbow in the curve.
 /// The physical insight is that pairs of points within the same cluster will be close together, pairs of points
 /// from different clusters will be far apart, and there is a gray region of distances between them where there will be few pairs
 /// of points.
+/// 
+/// If you fit a curve to the distances, it would be a bumpy, sideways s-curve. There would be an initial steep ascent, 
+/// followed by a slowly rising plateau, followed by a final steep rise. Of course, there should be a few jumps just past the middle,
+/// but for noisy data, there might not be. If you fit a curve to the data, the inflection point in the second derivative
+/// where the curve turns from concave downwards to concave upwards is an acceptable second choice for the linkage distance. 
+/// (This method does not currently estimate the second derivative; perhaps a later refinement?)  
 /// 
 /// When there is uncertainty between several values, we will prefer the smaller value.
 /// In a bottom up algorithm, it is better to err on the side of failing to merge clusters that belong together
@@ -253,14 +259,21 @@ impl SingleLinkage {
         // Use the default sort. 
         sorted_distances.sort();
 
-        //println!("===== SORTED DISTANCES =======");
-        //for dist in sorted_distances.iter() {
-        //    println!("{}", dist.square_distance);
-        //}
-        //println!("==============================");
+        // Uncomment this to log sorted distances. Paste into a spreadsheet and graph it 
+        // to see where the true linkage distance is and compare to the heuristic. 
+        /*
+        println!("===== SORTED DISTANCES =======");
+        for dist in sorted_distances.iter() {
+            println!("{}", dist.square_distance);
+        }
+        println!("==============================");
+        */
 
         let mut stats = DistanceGrowthStats::new();
         
+        // Restrict our search to the most promising region of the distances, 
+        // typically from just past halfway through just before the end. 
+        // This guarantees that we do not over-cluster and honor minimum_cluster_count.
         let start_index = 1 + self.noise_skip_by as usize + self.lowest_index_for_checking_growth_ratio as usize;
         let conservative_high_index = points.len() - self.minimum_cluster_count as usize;
         for i_distance in start_index..conservative_high_index
@@ -271,9 +284,9 @@ impl SingleLinkage {
             stats.accumulate(i_distance, previous_distance, distance);
         }
 
-        // get_index_of_max_change returns the index on the high side of the largest change. 
+        // get_index_after_max_change returns the index on the high side of the largest change. 
         // Subtract off 1 + noise_skip_by to get to the index before the big change. 
-        let index_to_use = stats.get_index_of_max_change(
+        let index_to_use = stats.get_index_after_max_change(
             self.lowest_index_for_checking_growth_ratio as usize, 
             conservative_high_index
         ) - 1 - self.noise_skip_by as usize;
@@ -502,8 +515,10 @@ impl DistanceGrowthStats {
     /// 
     ///   - `i_low_paired` - Do not choose `i_bin_of_maximum_increase_and_ratio` if it falls below this. 
     ///   - `i_high` - Do not go above this index.
-    ///   - return - The index into the sorted pairs of points having the best guess for linkage distance.
-    pub fn get_index_of_max_change(&self, i_low_paired : usize, i_high : usize) -> usize {
+    ///   - return - The index into the sorted pairs of points having the best guess for a value just a 
+    ///     little larger than the linkage distance. If there is a gap in distances, this points to the high side
+    ///     of the gap. The linkage distance will be on the low side of the gap.
+    pub fn get_index_after_max_change(&self, i_low_paired : usize, i_high : usize) -> usize {
         let i_conservative = i_low_paired + (i_high - i_low_paired) * 3 / 4;
         if self.index_of_maximum_increase_and_ratio > i_high {
             i_high

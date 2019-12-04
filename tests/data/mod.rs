@@ -12,6 +12,10 @@ use clusterphobia::clustering::{Clustering, integer_clustering};
 
 pub mod clustered_2d;
 
+pub fn load_s1() -> &'static str {
+    include_str!("test_s1.csv")
+}
+
 /// Load the data file test_s2.csv into a text string.
 /// 
 /// The file has an id, x and y coordinates, and the gold key (ideal) categorization.
@@ -32,11 +36,10 @@ pub mod clustered_2d;
 pub fn load_s2() -> &'static str {
     include_str!("test_s2.csv")
 }
-    
-pub fn s2_points() -> Vec<Point> {
-    let s2_data = load_s2();
+
+fn make_2d_points(csv_data : &str) -> Vec<Point> {
     let mut rdr = ReaderBuilder::new()
-        .from_reader(s2_data.as_bytes());
+        .from_reader(csv_data.as_bytes());
     let iter = rdr.deserialize::<Clustered2D>();
     let mut points = Vec::new();
     for record in iter {
@@ -50,6 +53,14 @@ pub fn s2_points() -> Vec<Point> {
         }
     }
     points
+}
+
+pub fn s1_points() -> Vec<Point> {
+    make_2d_points(load_s1())
+}
+
+pub fn s2_points() -> Vec<Point> {
+    make_2d_points(load_s2())
 }
 
 /// Parse the CSV data for 2-dimensional points that come with an answer key
