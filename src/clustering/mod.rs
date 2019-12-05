@@ -5,6 +5,8 @@ use std::usize;
 pub mod cluster;
 pub mod bcubed;
 pub mod single_linkage;
+pub mod logarithm;
+pub mod msb;
 
 use self::cluster::{Cluster, Chopped};
 

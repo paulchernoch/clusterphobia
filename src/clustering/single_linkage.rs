@@ -328,31 +328,41 @@ impl SingleLinkage {
         let mut max_increase = 0;
         let mut max_ratio = 0.0;
         let num_points = points.len();
-        let mut cume_points = 0;
+        let mut cume_points = 0_usize;
+
+        let conservative_high_index = num_points - self.minimum_cluster_count as usize;
 
         // Part 3: Narrow the focus to a single bin likely to have the largest jump in distance.
         for (i_bin, bin) in bins.iter().enumerate() {
-            let spread = bin.average_spread();
-            let previous_spread = if i_bin == 0 { 0 } else { bins[i_bin - 1].average_spread() };
-            let diff = spread - previous_spread;
-            if diff > max_increase
-            {
-                max_increase = diff;
-                index_of_maximum_increase = cume_points;
-                i_bin_of_maximum_increase = i_bin;
-            }
-            if previous_spread > 1 && cume_points >= self.lowest_index_for_checking_growth_ratio as usize
-            {
-                let ratio = spread as f64 / previous_spread as f64;
-                if ratio > max_ratio
-                {
-                    max_ratio = ratio;
-                    index_of_maximum_ratio = cume_points;
-                    i_bin_of_maximum_ratio = i_bin;
+            // We are done when we encroach on the highest distances.
+            if cume_points + bin.len() > conservative_high_index { break; }
+            
+            // Don't start recording until we reach lowest_index_for_checking_growth_ratio. 
+            // We need to get past the low distance early part of the curve where ratios can be absurdly high. 
+            if cume_points >= self.lowest_index_for_checking_growth_ratio as usize { 
 
-                    //TODO: The test "max_ratio > 5.0" could cause problems if we have clusters with highly varying densities.
-                    //      Make it a parameter?
-                    if cume_points > num_points / 2 && max_ratio > 5.0 { break; }
+                let spread = bin.average_spread();
+                let previous_spread = if i_bin == 0 { 0 } else { bins[i_bin - 1].average_spread() };
+                let diff = spread - previous_spread;
+                if diff > max_increase
+                {
+                    max_increase = diff;
+                    index_of_maximum_increase = cume_points;
+                    i_bin_of_maximum_increase = i_bin;
+                }
+                if previous_spread > 1
+                {
+                    let ratio = spread as f64 / previous_spread as f64;
+                    if ratio > max_ratio
+                    {
+                        max_ratio = ratio;
+                        index_of_maximum_ratio = cume_points;
+                        i_bin_of_maximum_ratio = i_bin;
+
+                        //TODO: The test "max_ratio > 5.0" could cause problems if we have clusters with highly varying densities.
+                        //      Make it a parameter?
+                        if cume_points > num_points / 2 && max_ratio > 5.0 { break; }
+                    }
                 }
             }
             cume_points += bin.len();
@@ -757,7 +767,18 @@ impl DistanceBin {
         if self.len() <= 1 { self.bounds.end - self.bounds.start }
         else { (self.highest_value_added - self.lowest_value_added) / (self.len() as u64 - 1) }
     }
-
+/*
+    pub fn average_ratio(&self) -> f64 {
+        if self.len() <= 1 || self.lowest_value_added == 0 { 1.0 }
+        else {
+            let ratio = self.highest_value_added / self.lowest_value_added;
+            if self.len() == 2 { ratio }
+            else {
+                let power : f64
+            }
+        }
+    }
+*/
     /// Sort the values_added in the bin by ascending value and find the place where the value jumps the most. 
     /// Return the value prior to the jump.
     pub fn find_square_distance_before_jump(&mut self, highest_value_from_previous_bin : u64) -> u64 {
