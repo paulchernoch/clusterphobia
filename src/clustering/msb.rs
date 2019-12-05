@@ -24,6 +24,7 @@ pub trait MostSignificantBit {
 }
 
 impl MostSignificantBit for u64 {
+    #[inline]
     fn msb(self) -> usize {
         // Bisection guarantees performance of O(Log B) where B is number of bits in integer.
         let mut high = 63_usize;
@@ -40,6 +41,7 @@ impl MostSignificantBit for u64 {
 }
 
 impl MostSignificantBit for u32 {
+    #[inline]
     fn msb(self) -> usize {
         // Bisection guarantees performance of O(Log B) where B is number of bits in integer.
         let mut high = 31_usize;
@@ -56,6 +58,7 @@ impl MostSignificantBit for u32 {
 }
 
 impl MostSignificantBit for u16 {
+    #[inline]
     fn msb(self) -> usize {
         // Bisection guarantees performance of O(Log B) where B is number of bits in integer.
         let mut high = 15_usize;

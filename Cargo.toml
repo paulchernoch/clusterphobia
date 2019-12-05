@@ -18,3 +18,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.41"
 csv = "1.1"
 hilbert = "0.1"
+criterion = "0.3"
+
+[[bench]]
+name = "logarithm_benchmarks"
+harness = false

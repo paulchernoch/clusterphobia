@@ -42,22 +42,35 @@ pub fn log_ratio(numerator : u64, denominator : u64) -> f64 {
     let reduced_denominator = denominator as f64 / (1 << d) as f64;
 
     // Calculate logs of the products and dividends and combine.
-    let approximate_log = (n as f64 - d as f64) * LOG2 + log_1_plus_x(reduced_numerator - 1.0) - log_1_plus_x(reduced_denominator - 1.0);
+    // To reduce from two calls to log_1_plus_x to a single call,
+    //   - if reduced_numerator / reduced_denominator >= 1 use it as the operand and add the result,
+    //   - otherwise use the inverse as the operand to log_1_plus_x and subtract the result.
+    let log_fraction = 
+        if reduced_numerator >= reduced_denominator { 
+            log_1_plus_x((reduced_numerator / reduced_denominator) - 1.0) 
+        }
+        else {
+            -log_1_plus_x((reduced_denominator / reduced_numerator) - 1.0)
+        };
+    let approximate_log = (n as f64 - d as f64) * LOG2 + log_fraction;
     approximate_log
 }
 
 /// Approximate the natural logarithm of one plus a number in the range (0..1). 
 /// 
 /// Use a Padé Approximation for the truncated Taylor series for Log((1+y)/(1-y)).
+/// 
+///   - x - must be a value between zero and one, inclusive.
+#[inline]
 fn log_1_plus_x(x : f64) -> f64 {
-    if x < 0.0 { f64::NAN }
-    else if x == 0.0 { 0.0 }
-    else {
-        let y = x / (2.0 + x);
-        let y_squared = y * y;
-        let log = 2.0*y*(15.0 - 4.0*y_squared)/(15.0 - 9.0*y_squared);
-        log
-    }
+    // This is private and its caller already checks for negatives, so no need to check again here. 
+    // Also, though ln(1 + 0) == 0 is an easy case, it is not so much more likely to be the argument
+    // than other values, so no need for a special test.
+    let y = x / (2.0 + x);
+    let y_squared = y * y;
+    // Original Formula is this: 2y·(15 - 4y²)/(15 - 9y²)
+    // Reduce multiplications: (8/9)y·(3.575 - y²)/((5/3) - y²)
+    0.8888888888888889 * y * (3.575 - y_squared) / (1.6666666666666667 - y_squared)
 }
 
 
