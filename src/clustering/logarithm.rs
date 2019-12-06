@@ -13,12 +13,12 @@ use super::msb::MostSignificantBit;
 ///   2. This makes the result `log(numerator/denominator) = log(2ⁿ·N / 2ᵈ·D) = (n-d)·log(2) + log(N) - log(D)`
 ///   3. To perform log(N), Taylor series does not converge in the neighborhood of zero, but it does near one...
 ///   4. ... since N is near one, substitute x = N - 1 so that we now need to evaluate log(1 + x)
-///   5. Perform a substitution of `y = y = x/(2+x)`
+///   5. Perform a substitution of `y = x/(2+x)`
 ///   6. Consider the related function `f(y) = Log((1+y)/(1-y))`
 ///      - `= Log((1 + x/(2+x)) / (1 - x/(2+x)))`
 ///      - `= Log( (2+2x) / 2)`
 ///      - `= Log(1 + x)`
-///   7. f(y) has a Taylor Expansion of which converges must faster than the expansion for Log(1+x) ... 
+///   7. f(y) has a Taylor Expansion which converges must faster than the expansion for Log(1+x) ... 
 ///      - For Log(1+x) → `x - x²/2 + x³/3 - y⁴/4 + ...`
 ///      - For Log((1+y)/(1-y)) → `y + y³/3 + y⁵/5 + ...`
 ///   8. Use the Padé Approximation for the truncated series `y + y³/3 + y⁵/5 ...`

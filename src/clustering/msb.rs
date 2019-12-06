@@ -23,6 +23,7 @@ pub trait MostSignificantBit {
     fn msb(self) -> usize;
 }
 
+/*
 #[inline]
 /// Return whether floor(log2(x))!=floor(log2(y))
 /// with zero for false and 1 for true, because this came from C!
@@ -30,10 +31,13 @@ fn ld_neq(x : u64, y : u64) -> u64 {
     let neq = (x^y) > (x&y);
     if neq { 1 } else { 0 }
 }
+*/
 
 impl MostSignificantBit for u64 {
     #[inline]
     fn msb(self) -> usize {
+        // FIRST ATTEMPT:
+
         /*
         // Bisection guarantees performance of O(Log B) where B is number of bits in integer.
         let mut high = 63_usize;
@@ -48,6 +52,9 @@ impl MostSignificantBit for u64 {
         low
         */
    
+        // SECOND ATTEMPT:
+
+        /*
         // This algorithm found on pg 16 of "Matters Computational" at  https://www.jjj.de/fxt/fxtbook.pdf
         // It avoids most if-branches and has no looping.
         // Using this instead of Bisection and looping shaved off 1/3 of the time.
@@ -64,8 +71,12 @@ impl MostSignificantBit for u64 {
         + (ld_neq(self, self & MU4) << 4)
         + (ld_neq(self, self & MU5) << 5);
         r as usize
+       */
 
-      
+        // THIRD ATTEMPT
+        let z = self.leading_zeros();
+        if z == 64 { 0 }
+        else { 63 - z as usize }
     }
 }
 
