@@ -44,7 +44,7 @@ pub fn log_ratio(numerator : u64, denominator : u64) -> f64 {
     // Calculate logs of the products and dividends and combine.
     // To reduce from two calls to log_1_plus_x to a single call,
     //   - if reduced_numerator / reduced_denominator >= 1 use it as the operand and add the result,
-    //   - otherwise use the inverse as the operand to log_1_plus_x and subtract the result.
+    //   - otherwise use the inverse as the operand to log_1_plus_x and subtract the result.  
     let log_fraction = 
         if reduced_numerator >= reduced_denominator { 
             log_1_plus_x((reduced_numerator / reduced_denominator) - 1.0) 
@@ -53,6 +53,8 @@ pub fn log_ratio(numerator : u64, denominator : u64) -> f64 {
             -log_1_plus_x((reduced_denominator / reduced_numerator) - 1.0)
         };
     let approximate_log = (n as f64 - d as f64) * LOG2 + log_fraction;
+    
+    // let approximate_log = (n as f64 - d as f64) * LOG2 + log_1_plus_x(reduced_numerator - 1.0) - log_1_plus_x(reduced_denominator - 1.0);
     approximate_log
 }
 
@@ -69,8 +71,10 @@ fn log_1_plus_x(x : f64) -> f64 {
     let y = x / (2.0 + x);
     let y_squared = y * y;
     // Original Formula is this: 2y·(15 - 4y²)/(15 - 9y²)
-    // Reduce multiplications: (8/9)y·(3.575 - y²)/((5/3) - y²)
-    0.8888888888888889 * y * (3.575 - y_squared) / (1.6666666666666667 - y_squared)
+    // 2.0 * y * (15.0 - 4.0 * y_squared) / (15.0 - 9.0 * y_squared)
+
+    // Reduce multiplications: (8/9)y·(3.75 - y²)/((5/3) - y²)
+    0.8888888888888889 * y * (3.75 - y_squared) / (1.6666666666666667 - y_squared)
 }
 
 

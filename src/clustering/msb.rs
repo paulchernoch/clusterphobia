@@ -34,6 +34,20 @@ fn ld_neq(x : u64, y : u64) -> u64 {
 impl MostSignificantBit for u64 {
     #[inline]
     fn msb(self) -> usize {
+        /*
+        // Bisection guarantees performance of O(Log B) where B is number of bits in integer.
+        let mut high = 63_usize;
+        let mut low = 0_usize;
+        while (high - low) > 1
+        {
+            let mid = (high+low)/2;
+            let mask_high = (1 << high) - (1 << mid);
+            if (mask_high & self) != 0 { low = mid; }
+            else { high = mid; }
+        }
+        low
+        */
+   
         // This algorithm found on pg 16 of "Matters Computational" at  https://www.jjj.de/fxt/fxtbook.pdf
         // It avoids most if-branches and has no looping.
         // Using this instead of Bisection and looping shaved off 1/3 of the time.
@@ -50,6 +64,8 @@ impl MostSignificantBit for u64 {
         + (ld_neq(self, self & MU4) << 4)
         + (ld_neq(self, self & MU5) << 5);
         r as usize
+
+      
     }
 }
 
