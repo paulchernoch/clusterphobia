@@ -74,6 +74,7 @@ impl MostSignificantBit for u64 {
        */
 
         // THIRD ATTEMPT
+        // This shaved another 50% off the time of log_ratio!
         let z = self.leading_zeros();
         if z == 64 { 0 }
         else { 63 - z as usize }

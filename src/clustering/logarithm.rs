@@ -58,11 +58,33 @@ pub fn log_ratio(numerator : u64, denominator : u64) -> f64 {
     approximate_log
 }
 
-/// Approximate the natural logarithm of one plus a number in the range (0..1). 
+/// Approximate the natural logarithm of the ratio of two unsigned integers to an accuracy of ±0.01,
+/// but use the library ln if the ratio is not in the range 0.18..4.5. 
+/// 
+pub fn log_ratio_small(numerator : u64, denominator : u64) -> f64 {
+    if numerator == 0 || denominator == 0 { return f64::NAN; }
+    let ratio = numerator as f64 / denominator as f64;
+
+    if ratio <= 4.5 && ratio >= 0.18 {
+        return log_1_plus_x(ratio - 1.0);
+    }
+    ratio.ln()
+}
+
+/// Approximate the natural logarithm of one plus a number in the range (-0.82..4.5). 
 /// 
 /// Use a Padé Approximation for the truncated Taylor series for Log((1+y)/(1-y)).
 /// 
-///   - x - must be a value between zero and one, inclusive.
+///   - If the value is in the range -0.82..-0.8, the accuracy is ±0.01.
+///   - If the value is in the range -0.8..-0.5, the accuracy is ±0.001.
+///   - If the value is in the range -0.5..0, the accuracy is ±0.000025.
+///   - If the value is in the range 0..1, the accuracy is ±0.000025.
+///   - If the value is in the range 1..2.3, the accuracy falls to ±0.001
+///   - If the value is in the range 2.3..4.5, the accuracy falls to ±0.01
+///   - It is not advisable to use it for higher or lower values. 
+/// 
+///   - x - For the best accuracy, x should must be a value between -0.5 and 1, inclusive. 
+///          
 #[inline]
 fn log_1_plus_x(x : f64) -> f64 {
     // This is private and its caller already checks for negatives, so no need to check again here. 
